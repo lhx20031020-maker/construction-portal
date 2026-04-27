@@ -37,11 +37,20 @@ const Dashboard = ({
 }) => {
   const [weather, setWeather] = useState({ temp: "24", condition: "Partly Cloudy" });
   const [projectStatus, setProjectStatus] = useState('Active');
+  const [resourceRows, setResourceRows] = useState([]);
+  
+  // State for the new Variation Bar
+  const [variationInput, setVariationInput] = useState({
+    task: '',
+    type: '',
+    count: 1,
+    number: 1
+  });
 
   const selectedPhaseCost = currentPhase?.totalCost || 0;
   const phaseLabel = currentPhase?.name ? currentPhase.name.toUpperCase() : "PHASE";
-
-  const [resourceRows, setResourceRows] = useState([]);
+  const allRoles = labourItems ? [...new Set(labourItems.map(i => i.identifier))] : [];
+  const allTasks = labourItems ? [...new Set(labourItems.map(i => i.task))] : [];
 
   useEffect(() => {
     if (labourItems && labourItems.length > 0) {
@@ -64,9 +73,12 @@ const Dashboard = ({
     } else {
       setResourceRows([{ task: '', type: '', count: 1, number: 1, wage: 0 }]);
     }
+    
+    // Set default role for variation bar
+    if (allRoles.length > 0) {
+        setVariationInput(prev => ({ ...prev, type: allRoles[0] }));
+    }
   }, [currentPhase?.id]);
-
-  const allRoles = labourItems ? [...new Set(labourItems.map(i => i.identifier))] : [];
 
   const updateRow = (idx, field, value) =>
     setResourceRows(prev => {
@@ -74,47 +86,41 @@ const Dashboard = ({
         if (i !== idx) return r;
         const u = { ...r, [field]: value };
         if (field === 'task' || field === 'type') {
-          const newTask = field === 'task' ? value : r.task;
-          const newRole = field === 'type' ? value : r.type;
-          u.wage = getWage(newTask, newRole);
+          u.wage = getWage(field === 'task' ? value : r.task, field === 'type' ? value : r.type);
         }
         return u;
       });
-      if (field !== 'task') return updated;
-      const taskOrder = [];
-      const groups = {};
-      updated.forEach(r => {
-        if (!groups[r.task]) { groups[r.task] = []; taskOrder.push(r.task); }
-        groups[r.task].push(r);
-      });
-      return taskOrder.flatMap(t => groups[t]);
+      return updated;
     });
 
-  const addRow = () => {
-    const defaultRole = allRoles[0] || '';
-    const newRow = { task: '', type: defaultRole, count: 1, number: 1, wage: getWage('', defaultRole) };
-    setResourceRows(prev => {
-      const inserted = [...prev, newRow];
-      const taskOrder = [];
-      const groups = {};
-      inserted.forEach(r => {
-        if (!groups[r.task]) { groups[r.task] = []; taskOrder.push(r.task); }
-        groups[r.task].push(r);
-      });
-      return taskOrder.flatMap(t => groups[t]);
-    });
+  const handleAddVariation = () => {
+    if (!variationInput.task) return;
+    const newRow = { 
+      ...variationInput, 
+      wage: getWage(variationInput.task, variationInput.type) 
+    };
+    setResourceRows(prev => [newRow, ...prev]); // Adds to top of list
+    setVariationInput({ task: '', type: allRoles[0] || '', count: 1, number: 1 });
   };
 
   const removeRow = (idx) =>
     setResourceRows(prev => prev.filter((_, i) => i !== idx));
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr 1fr', gap: '25px', alignItems: 'stretch', height: 'calc(100vh - 120px)', paddingBottom: '25px' }}>
+    <div style={{ 
+      display: 'grid', 
+      gridTemplateColumns: '3fr 2fr 1fr', 
+      gap: '25px', 
+      alignItems: 'stretch', 
+      height: 'calc(100vh - 140px)', 
+      paddingBottom: '30px',
+      boxSizing: 'border-box'
+    }}>
       
-      {/* --- COLUMN 1 & 2: OPERATIONS --- */}
+      {/* LEFT & MIDDLE COLUMNS */}
       <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '25px', minHeight: 0 }}>
         
-        {/* ROW 1: PHASE SELECTOR & ACCELERATION */}
+        {/* TOP ROW WIDGETS */}
         <div style={{ display: 'flex', gap: '25px', flexShrink: 0 }}>
           <div style={{ ...cardStyle, flex: 1, borderLeft: `6px solid ${THEME.primary}`, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <h3 style={{ margin: 0, fontSize: '10px', color: THEME.muted, textTransform: 'uppercase' }}>Current Project Phase</h3>
@@ -129,10 +135,9 @@ const Dashboard = ({
             </div>
             <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '10px', color: THEME.muted, fontWeight: '700' }}>Project Status:</span>
-              <select value={projectStatus} onChange={(e) => setProjectStatus(e.target.value)} style={{ fontSize: '10px', fontWeight: '900', border: 'none', background: 'none', cursor: 'pointer', outline: 'none', textAlign: 'right', color: projectStatus === 'Active' ? '#10b981' : projectStatus === 'On Hold' ? '#f59e0b' : '#ef4444' }}>
+              <select value={projectStatus} onChange={(e) => setProjectStatus(e.target.value)} style={{ fontSize: '10px', fontWeight: '900', border: 'none', background: 'none', cursor: 'pointer', outline: 'none', textAlign: 'right', color: projectStatus === 'Active' ? '#10b981' : '#ef4444' }}>
                 <option value="Active">● ACTIVE</option>
                 <option value="On Hold">● ON HOLD</option>
-                <option value="Work Stopped">● WORK STOPPED</option>
               </select>
             </div>
           </div>
@@ -146,32 +151,71 @@ const Dashboard = ({
           </div>
         </div>
 
-        {/* RESOURCE MANAGER - THE SCROLL FIX IS HERE */}
+        {/* RESOURCE MANAGER */}
         <div style={{ ...cardStyle, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 10px', flexShrink: 0 }}>
             <h3 style={{ margin: 0 }}>Resource Manager</h3>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={addRow} style={{ border: `1px solid ${THEME.primary}`, background: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', color: THEME.primary, cursor: 'pointer' }}>+ Add Row</button>
-              <button style={{ border: `1px solid ${THEME.border}`, background: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>+ Import .xlsx</button>
-            </div>
+            <button style={{ border: `1px solid ${THEME.border}`, background: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>+ Import .xlsx</button>
           </div>
 
-          {/* Sticky Header Row */}
+          {/* HEADINGS */}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 0.7fr 0.9fr 1fr auto', gap: '15px', padding: '4px 20px 8px', borderBottom: '2px solid #f1f5f9', flexShrink: 0 }}>
             {['Task', 'Role', 'Days', 'Number', 'Rate', 'Total', ''].map((h, i) => (
               <span key={i} style={{ fontSize: '10px', fontWeight: '800', color: THEME.muted, textTransform: 'uppercase' }}>{h}</span>
             ))}
           </div>
+{/* THE VARIATION INPUT BAR */}
+<div style={{ 
+  display: 'grid', 
+  gridTemplateColumns: '1.2fr 2.3fr 0.8fr 0.7fr 0.9fr 1fr auto', 
+  gap: '15px', 
+  padding: '12px 20px', 
+  backgroundColor: '#eff6ff', 
+  borderBottom: '2px solid #bfdbfe',
+  alignItems: 'center'
+}}>
+  {/* TASK DROPDOWN (Replaced the text input) */}
+  <select 
+      value={variationInput.task} 
+      onChange={(e) => setVariationInput({...variationInput, task: e.target.value})} 
+      style={{ ...inputStyle, background: 'white', border: `1px solid ${THEME.primary}` }}
+  >
+    <option value="">Select Task...</option>
+    {allTasks.map(task => <option key={task} value={task}>{task}</option>)}
+  </select>
+  
+  <select 
+      value={variationInput.type} 
+      onChange={(e) => setVariationInput({...variationInput, type: e.target.value})} 
+      style={{ ...inputStyle, background: 'white' }}
+  >
+    {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
+  </select>
+  
+  <input type="number" value={variationInput.count} onChange={(e) => setVariationInput({...variationInput, count: e.target.value})} style={inputStyle} />
+  <input type="number" value={variationInput.number} onChange={(e) => setVariationInput({...variationInput, number: e.target.value})} style={inputStyle} />
+  
+  <div style={{ textAlign: 'center', fontSize: '10px', fontWeight: '700', color: '#1e40af' }}>
+     €{getWage(variationInput.task, variationInput.type)}/h
+  </div>
+  
+  <div style={{ textAlign: 'center', fontSize: '11px', color: '#64748b' }}>—</div>
+  
+  <button 
+      onClick={handleAddVariation} 
+      style={{ backgroundColor: THEME.primary, color: 'white', border: 'none', borderRadius: '6px', padding: '8px 15px', fontWeight: '800', cursor: 'pointer' }}
+  >
+    ADD
+  </button>
+</div>
 
-          {/* SCROLLABLE CONTAINER: flex: 1 + overflow-y: auto */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px', minHeight: 0 }}>
+          {/* SCROLLABLE CONTENT */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
             {resourceRows.map((item, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 0.7fr 0.9fr 1fr auto', gap: '15px', padding: '10px 0', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}>
-                {idx === 0 || resourceRows[idx - 1].task !== item.task ? (
-                  <input type="text" value={item.task} onChange={(e) => updateRow(idx, 'task', e.target.value)} style={inputStyle} />
-                ) : ( <div style={{ padding: '12px' }} /> )}
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.1fr 2.3fr 0.8fr 0.7fr 0.9fr 1fr auto', gap: '15px', padding: '10px 0', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}>
+                <input type="text" value={item.task} onChange={(e) => updateRow(idx, 'task', e.target.value)} style={inputStyle} />
                 <select value={item.type} onChange={(e) => updateRow(idx, 'type', e.target.value)} style={inputStyle}>
-                  {allRoles.length > 0 ? allRoles.map(role => <option key={role} value={role}>{role}</option>) : <option value={item.type}>{item.type}</option>}
+                  {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
                 </select>
                 <input type="number" value={item.count} min={0} onChange={(e) => updateRow(idx, 'count', parseInt(e.target.value) || 0)} style={inputStyle} />
                 <input type="number" value={item.number} min={1} onChange={(e) => updateRow(idx, 'number', parseInt(e.target.value) || 1)} style={inputStyle} />
@@ -184,9 +228,9 @@ const Dashboard = ({
         </div>
       </div>
 
-      {/* --- COLUMN 3: FINANCIALS & PARAMETERS --- */}
+      {/* RIGHT COLUMN */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-        <div style={{ ...cardStyle, background: THEME.primary, color: 'white', border: 'none', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...cardStyle, background: THEME.primary, color: 'white', border: 'none', padding: '24px' }}>
           <p style={{ margin: 0, fontSize: '10px', fontWeight: '800', opacity: 0.7 }}>ESTIMATED PROJECT COST</p>
           <div style={{ fontSize: '20px', fontWeight: '900', marginBottom: '16px' }}>€{grandTotal.toLocaleString()}</div>
           <p style={{ margin: 0, fontSize: '10px', fontWeight: '800', opacity: 0.7 }}>{phaseLabel} COST</p>
@@ -194,15 +238,14 @@ const Dashboard = ({
           <button onClick={() => setActiveTab('Project Hub')} style={{ width: '100%', marginTop: '20px', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '11px' }}>VIEW BREAKDOWN →</button>
         </div>
 
-        <div style={{ ...cardStyle, borderTop: `4px solid ${THEME.primary}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h3 style={{ margin: 0, fontSize: '14px' }}>Parameters</h3>
-            <select value={projectData.unitSystem} onChange={(e) => setProjectData({...projectData, unitSystem: e.target.value})} style={{ fontSize: '10px', padding: '4px' }}>
-              <option value="metric">m²</option>
-              <option value="imperial">sq ft</option>
-            </select>
-          </div>
-          {[{ label: 'GIA', key: 'gia', icon: <Maximize size={14}/> }, { label: 'Storeys', key: 'storeys', icon: <Layers size={14}/> }, { label: 'Wall Area', key: 'wallArea', icon: <Warehouse size={14}/> }, { label: 'Window Area', key: 'windowArea', icon: <Box size={14}/> }].map(field => (
+        <div style={{ ...cardStyle, borderTop: `4px solid ${THEME.primary}`, padding: '20px' }}>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '14px' }}>Parameters</h3>
+          {[
+            { label: 'GIA', key: 'gia', icon: <Maximize size={14}/> },
+            { label: 'Storeys', key: 'storeys', icon: <Layers size={14}/> },
+            { label: 'Wall Area', key: 'wallArea', icon: <Warehouse size={14}/> },
+            { label: 'Window Area', key: 'windowArea', icon: <Box size={14}/> }
+          ].map(field => (
             <div key={field.key} style={{ marginBottom: '12px' }}>
               <label style={{ fontSize: '10px', fontWeight: '800', color: THEME.muted, display: 'flex', alignItems: 'center', gap: '5px' }}>{field.icon} {field.label.toUpperCase()}</label>
               <input type="number" value={projectData[field.key]} onChange={(e) => setProjectData({...projectData, [field.key]: parseFloat(e.target.value) || 0})} style={{ ...selectStyle, padding: '8px', marginTop: '4px' }} />
@@ -213,7 +256,7 @@ const Dashboard = ({
         <div style={{ ...cardStyle, padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <CloudSun size={20} color="#1e40af" />
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>Weather Today</h3>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>Weather</h3>
             <div style={{ marginLeft: 'auto', backgroundColor: '#ffedd5', color: '#9a3412', padding: '4px 10px', borderRadius: '15px', fontSize: '13px', fontWeight: '700' }}>{weather.temp}°C</div>
           </div>
           <div style={{ fontSize: '15px', color: '#475569' }}>{weather.condition}</div>
