@@ -88,6 +88,31 @@ export default function App() {
 
   const currentPhase = phasesWithCosts.find(p => p.id === selectedPhaseId) || phasesWithCosts[0];
 
+  // Labour items from master_dataset.json, filtered by current phase
+  const labourItems = useMemo(() =>
+    libraryData
+      .filter(i => i.Category === 'Labor' && i.Phase === currentPhase?.name)
+      .reduce((acc, i) => {
+        // Group by Identifier (job role), sum up hours via quantities
+        const existing = acc.find(x => x.identifier === i.Identifier);
+        const hours = quantities[i.Code] || 0;
+        if (existing) {
+          existing.hours += hours;
+          existing.cost += hours * i["Price (€)"];
+        } else {
+          acc.push({
+            task: i.Task,
+            identifier: i.Identifier,
+            unit: i["U.M."],
+            hours,
+            unitPrice: i["Price (€)"],
+            cost: hours * i["Price (€)"]
+          });
+        }
+        return acc;
+      }, []),
+  [quantities, currentPhase]);
+
   // ───────────────────────────────────────────────────────────────────────────
 const dailyRiskSum = delayMetrics.reduce((sum, m) => sum + (parseFloat(m.dailyCost) || 0), 0);
 const overrunDays = 0; // replace with your forecast logic if needed
@@ -120,6 +145,7 @@ const overrunDays = 0; // replace with your forecast logic if needed
               projectData={projectData}
               setProjectData={setProjectData}
               grandTotal={grandTotal}
+              labourItems={labourItems}       // ← real Labor data from master_dataset.json
             />
           )}
           {activeTab === 'Project Hub' && (
