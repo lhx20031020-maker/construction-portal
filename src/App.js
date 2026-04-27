@@ -11,7 +11,7 @@ import { getInitialQuantities } from './constants/projectemplate'; // ← FIXED:
 import Metrics from './pages/riskmetric';
 import { THEME } from './constants/theme';
 
-const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: `1px solid ${THEME.border}`, backgroundColor: '#f1f5f9', fontWeight: '600', color: THEME.sidebar, outline: 'none' };
+const inputStyle = { width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '12px', paddingLeft: '12px', borderRadius: '8px', border: `1px solid ${THEME.border}`, backgroundColor: '#f1f5f9', fontWeight: '600', color: THEME.sidebar, outline: 'none' };
 const cardStyle = { backgroundColor: 'white', borderRadius: '24px', padding: '32px', border: `1px solid ${THEME.border}`, position: 'relative', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' };
 const addBtn = { backgroundColor: THEME.primary, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' };
 
@@ -95,7 +95,7 @@ export default function App() {
       .reduce((acc, i) => {
         // Group by Identifier (job role), sum up hours via quantities
         const existing = acc.find(x => x.identifier === i.Identifier);
-        const hours = quantities[i.Code] || 0;
+        const hours = 1;
         if (existing) {
           existing.hours += hours;
           existing.cost += hours * i["Price (€)"];
@@ -132,7 +132,7 @@ const overrunDays = 0; // replace with your forecast logic if needed
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} setViewMode={setViewMode} />
       <main style={{ marginLeft: '200px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Header activeTab={activeTab} currentProject={currentProject} username={username} />
-        <div style={{ padding: '30px 50px' }}>
+        <div style={{ padding: '30px 30px 30px 80px' }}>
           {activeTab === 'Dashboard' && (
             <Dashboard
               phases={phasesWithCosts}        // ← pass enriched phases

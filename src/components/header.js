@@ -12,6 +12,7 @@ const Header = ({ activeTab, currentProject, username }) => {
       alignItems: 'center', 
       justifyContent: 'space-between',
       padding: '0 60px',
+      paddingLeft: '90px',
       position: 'sticky',
       top: 0,
       zIndex: 10

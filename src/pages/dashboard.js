@@ -4,7 +4,7 @@ import { THEME } from '../constants/theme';
 import libraryData from '../constants/master_dataset.json';
 
 const selectStyle = {
-  width: '100%', padding: '12px', borderRadius: '10px',
+  width: '90%', padding: '12px', borderRadius: '10px',
   border: `1px solid ${THEME.border}`, backgroundColor: '#f8fafc',
   fontWeight: '600', outline: 'none'
 };
@@ -106,14 +106,21 @@ const Dashboard = ({
   const removeRow = (idx) =>
     setResourceRows(prev => prev.filter((_, i) => i !== idx));
 
+  const RESOURCE_GRID_LAYOUT = {
+    display: 'grid',
+    gridTemplateColumns: '150px 210px 60px 60px 60px 75px 70px',
+    gap: '30px', // This creates the uniform buffer between every box
+    alignItems: 'left',
+    width: '100%'
+  };
+
   return (
     <div style={{ 
       display: 'grid', 
       gridTemplateColumns: '3fr 2fr 1fr', 
-      gap: '25px', 
+      gap: '30px', 
       alignItems: 'stretch', 
-      height: 'calc(100vh - 140px)', 
-      paddingBottom: '30px',
+      height: 'calc(100vh - 14px)',
       boxSizing: 'border-box'
     }}>
       
@@ -159,16 +166,14 @@ const Dashboard = ({
           </div>
 
           {/* HEADINGS */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 0.7fr 0.9fr 1fr auto', gap: '15px', padding: '4px 20px 8px', borderBottom: '2px solid #f1f5f9', flexShrink: 0 }}>
+          <div style={{ ...RESOURCE_GRID_LAYOUT, padding: '4px 20px 8px', borderBottom: '10px solid #f1f5f9', flexShrink: 0 }}>
             {['Task', 'Role', 'Days', 'Number', 'Rate', 'Total', ''].map((h, i) => (
-              <span key={i} style={{ fontSize: '10px', fontWeight: '800', color: THEME.muted, textTransform: 'uppercase' }}>{h}</span>
+              <span key={i} style={{ fontSize: '10px', fontWeight: '800', color: THEME.muted, textTransform: 'uppercase', textAlign: 'center' }}>{h}</span>
             ))}
           </div>
 {/* THE VARIATION INPUT BAR */}
 <div style={{ 
-  display: 'grid', 
-  gridTemplateColumns: '1.2fr 2.3fr 0.8fr 0.7fr 0.9fr 1fr auto', 
-  gap: '15px', 
+  ...RESOURCE_GRID_LAYOUT, 
   padding: '12px 20px', 
   backgroundColor: '#eff6ff', 
   borderBottom: '2px solid #bfdbfe',
@@ -203,7 +208,7 @@ const Dashboard = ({
   
   <button 
       onClick={handleAddVariation} 
-      style={{ backgroundColor: THEME.primary, color: 'white', border: 'none', borderRadius: '6px', padding: '8px 15px', fontWeight: '800', cursor: 'pointer' }}
+      style={{ backgroundColor: THEME.primary, color: 'white', border: '8px', borderRadius: '6px', padding: '8px 15px', fontWeight: '800', cursor: 'pointer' }}
   >
     ADD
   </button>
@@ -212,7 +217,7 @@ const Dashboard = ({
           {/* SCROLLABLE CONTENT */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
             {resourceRows.map((item, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.1fr 2.3fr 0.8fr 0.7fr 0.9fr 1fr auto', gap: '15px', padding: '10px 0', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}>
+              <div key={idx} style={{ ...RESOURCE_GRID_LAYOUT, padding: '10px 0', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}>
                 <input type="text" value={item.task} onChange={(e) => updateRow(idx, 'task', e.target.value)} style={inputStyle} />
                 <select value={item.type} onChange={(e) => updateRow(idx, 'type', e.target.value)} style={inputStyle}>
                   {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
